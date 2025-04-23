@@ -19,7 +19,7 @@ using Population = vector<Chromosome>;
 int N_CAPTEURS = 0;
 int N_EMPLACEMENTS = 0;
 int TAILLE_POPULATION = 50;
-int TAILLE_CHROMOSOME = N_CAPTEURS * N_EMPLACEMENTS;
+int TAILLE_CHROMOSOME = N_EMPLACEMENTS * N_CAPTEURS;
 int MAX_GENERATIONS = 100;
 
 vector<pair<double, double>> emplacements;
@@ -199,21 +199,23 @@ Population initialiserPopulation() {
 
     return population;
 }
-
 void enregistrerResultat(const string& nom, int nb_poi, int nb_caps, bool faisable,
-                         int utilisés, long long temps, int gen, const string& fichier_csv) {
+                         int utilises, int nb_poi_couverts, long long temps, int gen,
+                         const string& fichier_csv) {
     ofstream fichier(fichier_csv, ios::app);
     fichier << nom << "," << nb_poi << "," << nb_caps << "," << (faisable ? "Oui" : "Non") << ","
-            << utilisés << "," << temps << "," << gen << "\n";
+            << utilises << "," << nb_poi_couverts << "," << temps << "," << gen << "\n";
     fichier.close();
 }
+
 
 int main() {
     const string fichier_json = "data1.json";
     const string fichier_csv = "resultats.csv";
 
     ofstream fichier_out(fichier_csv);
-    fichier_out << "Fichier,POI,Capteurs,Faisable,Capteurs_utilisés,Temps_ms,Generations\n";
+fichier_out << "Fichier,POI,Capteurs,Faisable,Capteurs_utilisés,POI_Couverts,Temps_ms,Generations\n";
+
     fichier_out.close();
 
     ifstream f(fichier_json);
@@ -287,16 +289,32 @@ int main() {
         auto fin = chrono::high_resolution_clock::now();
         auto temps_ms = chrono::duration_cast<chrono::milliseconds>(fin - debut).count();
 
-        int capteurs_utiles = 0;
-        if (faisable)
-            for (int i = 0; i < N_CAPTEURS; ++i)
-                if (meilleur_global[i] != 0)
-                    capteurs_utiles++;
+       int capteurs_utiles = 0;
+vector<bool> couverts(points_interet.size(), false);
+int nb_couverts = 0;
+
+if (faisable) {
+    for (int i = 0; i < N_CAPTEURS; ++i) {
+        if (meilleur_global[i] == 0) continue;
+        capteurs_utiles++;
+        int e = meilleur_global[i] - i * N_EMPLACEMENTS - 1;
+        double rayon = rayons_capteurs[i];
+
+        for (int j = 0; j < points_interet.size(); ++j) {
+            if (!couverts[j] && matrice_distance[e][j] <= rayon)
+                couverts[j] = true;
+        }
+    }
+
+    nb_couverts = count(couverts.begin(), couverts.end(), true);
+}
+
 
         enregistrerResultat(image, points_interet.size(), N_CAPTEURS,
-                            faisable, capteurs_utiles, temps_ms,
-                            generation_finale == -1 ? MAX_GENERATIONS : generation_finale,
-                            fichier_csv);
+                    faisable, capteurs_utiles, nb_couverts, temps_ms,
+                    generation_finale == -1 ? MAX_GENERATIONS : generation_finale,
+                    fichier_csv);
+
     }
 
     cout << "\n✅ Toutes les expériences de `data1.json` ont été traitées.\n";
