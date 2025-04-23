@@ -126,7 +126,6 @@ pair<Chromosome, Chromosome> croisement(const Chromosome& parent1, const Chromos
 
     return {enfant1, enfant2};
 } 
-// تابع الكود الحالي وستجد فيه...
 Chromosome greedyInitialisation() {
     Chromosome individu(N_CAPTEURS, 0);
     vector<bool> couverts(points_interet.size(), false);
